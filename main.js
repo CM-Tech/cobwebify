@@ -5,13 +5,46 @@ var size = {
   w: window.innerWidth,
   h: window.innerHeight
 };
+var balls = [];
+
+function ball(x, y) {
+  this.x = x;
+  this.y = y;
+  this.vx = 0;
+  this.vy = 0;
+  this.move = function() {
+    this.vy += 0.5;
+    if (this.y + 20 > size.h) {
+      this.y = size.h - 20;
+      this.vy = -Math.abs(this.vy);
+    }
+    if (this.x + 20 > size.w) {
+      this.x = size.x - 20;
+      this.vx = -Math.abs(this.vx);
+    }
+    if (this.x - 20 < 0) {
+      this.x = 20;
+      this.vx = Math.abs(this.vx);
+    }
+    this.x += this.vx;
+    this.y += this.vy;
+    this.vx = this.vx * 0.95;
+    this.vy = this.vy * 0.95;
+  };
+  return this;
+}
 var pixels = [];
 var edgePoints = [];
 c.width = size.w;
 c.height = size.h;
-input.value = "It works";
+for (var i = 0; i < 10; i++) {
+  balls.push(new ball(Math.random() * size.w, Math.random() * size.h));
+}
+input.value = "(◉_◉)";
 var raylength = 20; //distance before ray is destroyed
 var cpp = 3; //amount of times a pixel should send a ray
+var textSize = 100;
+
 function fragmentText(text, maxWidth) {
   var words = text.split(' '),
     lines = [],
@@ -51,17 +84,20 @@ function raycast(x, y, dir) {
   for (var i = 0; i < raylength; i++) {
     cX += dirX;
     cY += dirY;
-    if (pixels[Math.floor(cY)][Math.floor(cX)]) {
-      ctx.beginPath();
-      ctx.moveTo(x, y);
-      ctx.lineTo(cX, cY);
-      ctx.stroke();
-      return true; //indicates hit
+    if (Math.floor(cY) > 0 && Math.floor(cY) < pixels.length && Math.floor(cX) > 0 && Math.floor(cX) < pixels[0].length) {
+      if (pixels[Math.floor(cY)][Math.floor(cX)]) {
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(cX, cY);
+        ctx.stroke();
+        return true; //indicates hit
+      }
     }
   }
 }
 
 function setupPixels(txt) {
+  ctx.clearRect(0, 0, size.w, size.h);
   ctx.beginPath();
   ctx.font = "100px Arial";
   ctx.lineWidth = 1;
@@ -70,7 +106,11 @@ function setupPixels(txt) {
   txt.forEach(function(line, i) {
     ctx.strokeText(line, size.w / 2, (i + 1) * 100 + 60);
   });
-
+  for (var i = 0; i < balls.length; i++) {
+    ctx.beginPath();
+    ctx.arc(balls[i].x, balls[i].y, 20, 0, Math.PI * 2, true);
+    ctx.stroke();
+  }
   pixels = [];
   var ctext = ctx.getImageData(0, 0, size.w, size.h);
   var pixtext = ctext.data;
@@ -95,10 +135,19 @@ function setupPixels(txt) {
   }
 }
 
+function tick() {
+  for (var i = 0; i < balls.length; i++) {
+    balls[i].move();
+  }
+  key();
+}
+window.setInterval(tick, 1);
+
 function setup(txt) {
   //create an array of pixels witht the bodrer of the text
   setupPixels(fragmentText(txt, size.w));
-  for (var i = 0; i < 225 * txt.length; i++) {
+
+  for (var i = 0; i < 0.5 * edgePoints.length; i++) {
     var edgePoint = edgePoints[Math.floor(Math.random() * edgePoints.length)];
 
     for (var j = 0; j < cpp; j++) {
@@ -118,3 +167,10 @@ function key() {
 }
 input.onkeyup = key;
 input.onchange = key;
+window.onresize = function() {
+  size.w = window.innerWidth;
+  size.h = window.innerHeight;
+  c.width = size.w;
+  c.height = size.h;
+  key();
+};
